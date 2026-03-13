@@ -619,8 +619,8 @@
                             <div>
                                 <h4 class="font-semibold text-[15px] flex flex-wrap items-center gap-1 cursor-pointer hover:underline" onclick="window.handleViewStats('${fb.author_id}')">
                                     <span class="text-gray-900">${escapeHtml(fb.fullName)}</span>
-                                    <span class="text-[#65676B] font-normal text-sm no-underline">đã tham gia</span>
-                                    <span class="font-bold text-[#0866FF] bg-blue-50 px-1.5 rounded no-underline">${escapeHtml(fb.classInfo)}</span>
+                                    <span class="text-[#65676B] font-normal text-sm no-underline">đã tham gia khóa học</span>
+                                    <span class="font-bold text-[#0866FF] bg-blue-50 px-1.5 rounded no-underline uppercase">${escapeHtml(fb.classInfo)}</span>
                                 </h4>
                                 <div class="text-[#65676B] text-[13px] flex items-center gap-1 mt-0.5">${fb.date} · <i data-lucide="globe" class="w-3 h-3"></i></div>
                             </div>
@@ -912,7 +912,7 @@
             e.preventDefault();
             if (!currentUser) return alert('Vui lòng đăng nhập!');
 
-            const classInfo = document.getElementById('post-classInfo').value.trim();
+            const classInfo = document.getElementById('post-classInfo').value.trim().toUpperCase();
             const feedbackText = document.getElementById('post-feedback').value.trim();
             const btn = document.getElementById('submit-btn');
 
