@@ -97,7 +97,7 @@
             animation: spin-slow 3s linear infinite;
         }
 
-        /* Cấu hình nhóm hover cho nút reaction mobile/desktop */
+        /* Cấu hình nhóm hover cho nút reaction */
         .reaction-container:hover .reaction-popover,
         .reaction-container:focus-within .reaction-popover {
             display: flex;
@@ -139,7 +139,6 @@
                 </div>
                 <span class="text-[#0866FF] font-bold text-xl tracking-tight hidden sm:block">Góc Cảm Nhận</span>
             </div>
-
             <div class="flex items-center gap-1 sm:gap-2">
                 <button onclick="window.openAdminStatsModal(event)"
                     class="p-2 text-gray-500 hover:text-[#0866FF] hover:bg-blue-50 rounded-full transition"
@@ -215,17 +214,24 @@
                             class="w-full p-2.5 bg-white border border-[#ced0d4] rounded-lg focus:ring-2 focus:ring-[#0866FF] outline-none transition"
                             required />
                     </div>
+
                     <div
                         class="border border-[#ced0d4] rounded-xl p-3 flex justify-between items-center bg-white shadow-sm">
-                        <span class="font-semibold text-[#050505]">Thêm ảnh đính kèm</span>
+                        <span class="font-semibold text-[#050505]">Đính kèm Ảnh, Video, Tài liệu...</span>
                         <button type="button" onclick="document.getElementById('file-input').click()"
                             class="text-[#45BD62] hover:bg-[#f0f2f5] p-2 rounded-full transition">
-                            <i data-lucide="image" class="w-6 h-6"></i>
+                            <i data-lucide="paperclip" class="w-6 h-6"></i>
                         </button>
-                        <input type="file" id="file-input" accept="image/*,video/*" multiple class="hidden"
+                        <input type="file" id="file-input" accept="*/*" multiple class="hidden"
                             onchange="window.handleFileChange(event)" />
                     </div>
-                    <div id="media-preview-container" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar"></div>
+
+                    <div id="upload-status-list"
+                        class="space-y-2 mt-3 empty:hidden max-h-[150px] overflow-y-auto custom-scrollbar">
+                    </div>
+
+                    <div id="media-preview-container" class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar mt-3">
+                    </div>
                 </form>
             </div>
             <div class="p-4 border-t border-[#ced0d4] bg-white">
@@ -256,7 +262,7 @@
                         required />
                     <p class="text-xs text-gray-500 mt-2 flex items-start gap-1">
                         <i data-lucide="shield-check" class="w-3.5 h-3.5 text-green-600 mt-0.5"></i>
-                        Dùng để xác thực và bảo vệ dữ liệu đánh giá của bạn (SĐT sẽ được ẩn bảo mật).
+                        Dùng để xác thực và bảo vệ dữ liệu đánh giá của bạn.
                     </p>
                 </div>
                 <div>
@@ -309,9 +315,7 @@
                 <div class="w-16 h-16 rounded-full bg-gradient-to-tr from-[#0866FF] to-blue-300 text-white flex items-center justify-center font-bold text-2xl shadow-sm mx-auto mb-3"
                     id="stats-avatar">U</div>
                 <h4 class="font-bold text-xl text-gray-900 mb-1" id="stats-name">Đang tải...</h4>
-
                 <div id="stats-loading" class="text-gray-500 py-4 animate-pulse">Đang thu thập dữ liệu...</div>
-
                 <div id="stats-content" class="hidden mt-4">
                     <div class="grid grid-cols-2 gap-3 mb-4">
                         <div class="bg-blue-50 p-3 rounded-lg border border-blue-100 shadow-sm">
@@ -324,11 +328,11 @@
                         </div>
                         <div class="bg-purple-50 p-3 rounded-lg border border-purple-100 shadow-sm">
                             <div class="text-2xl font-bold text-purple-600" id="stats-image">0</div>
-                            <div class="text-[11px] text-gray-600 font-bold uppercase mt-1">Có hình ảnh</div>
+                            <div class="text-[11px] text-gray-600 font-bold uppercase mt-1">Có Hình ảnh</div>
                         </div>
                         <div class="bg-orange-50 p-3 rounded-lg border border-orange-100 shadow-sm">
                             <div class="text-2xl font-bold text-orange-600" id="stats-video">0</div>
-                            <div class="text-[11px] text-gray-600 font-bold uppercase mt-1">Có Video</div>
+                            <div class="text-[11px] text-gray-600 font-bold uppercase mt-1">Có File/Video</div>
                         </div>
                     </div>
                 </div>
@@ -380,12 +384,14 @@
     </div>
 
     <script>
-        // --- CẤU HÌNH BACKEND SUPABASE ---
+        // --- CẤU HÌNH API ---
         const API_URL = 'https://nfojmndryasqyzyoyomi.supabase.co';
         const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mb2ptbmRyeWFzcXl6eW95b21pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMyNjgxMDgsImV4cCI6MjA3ODg0NDEwOH0.kyMOYBdkOGCsb_PapGgHAYtGYXKMyHLIOrY1aNdBUDI';
         const backendApp = window.supabase.createClient(API_URL, API_KEY);
 
-        // --- QUẢN LÝ TRẠNG THÁI (STATE) ---
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyjkUQnA3-krUpwFmH_GE5EMJQrho_QVskkoh2bBi74U83C5_Z-Y-CCA1rjgUJzEyYRYg/exec';
+
+        // --- QUẢN LÝ TRẠNG THÁI ---
         let currentUser = null;
         let currentUserProfile = null;
         let feedbacks = [];
@@ -400,7 +406,6 @@
         let isFetching = false;
         let hasMorePosts = true;
 
-        // Cấu hình hiển thị Reaction
         const reactionConfig = {
             'like': { icon: '<i data-lucide="thumbs-up" class="w-5 h-5 fill-current"></i>', text: 'Thích', color: 'text-[#0866FF]' },
             'love': { icon: '❤️', text: 'Yêu', color: 'text-red-500' },
@@ -409,7 +414,192 @@
             'sad': { icon: '😢', text: 'Buồn', color: 'text-yellow-600' }
         };
 
-        // --- MÀN HÌNH LOADING CHUYÊN NGHIỆP ---
+        // --- HÀM BỔ TRỢ UPLOAD GOOGLE DRIVE ---
+        window.uploadPut = function (url, file, pBar, pPercent) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', url, true);
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 95); // Dừng ở 95% chờ Google đồng bộ file
+                        pBar.style.width = percent + "%";
+                        pPercent.innerText = percent + "%";
+                    }
+                };
+                xhr.onload = () => (xhr.status >= 200 && xhr.status < 400) ? resolve() : reject(new Error("Upload failed"));
+                xhr.onerror = () => resolve();
+                xhr.send(file);
+            });
+        };
+
+        window.findFileLink = async function (name, folderId) {
+            const res = await fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'findFile', fileName: name, folderId: folderId })
+            });
+            return await res.json();
+        };
+
+        const compressImageToBase64 = (file) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader(); reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image(); img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; let scaleSize = 1;
+                        if (img.width > MAX_WIDTH) scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize;
+                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
+                    };
+                };
+            });
+        };
+
+        // --- UPLOAD ĐỘC LẬP TỪNG FILE (SONG SONG) ---
+        window.uploadSingleFile = async (file, fileId) => {
+            const statusList = document.getElementById('upload-status-list');
+
+            const uiHtml = `
+                <div id="upload-item-${fileId}" class="bg-[#f0f2f5] p-3 rounded-lg border border-[#ced0d4] animate-fade-in">
+                    <div class="flex justify-between text-xs font-bold text-slate-600 mb-1.5">
+                        <span class="truncate max-w-[80%] flex items-center gap-1.5">
+                            <i data-lucide="file" class="w-3.5 h-3.5"></i> ${file.name}
+                        </span>
+                        <span id="percent-${fileId}">0%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-1">
+                        <div id="bar-${fileId}" class="h-full bg-[#0866FF] w-0 transition-all duration-300"></div>
+                    </div>
+                    <p id="text-${fileId}" class="text-[10px] text-gray-500 italic mt-1">Đang chuẩn bị...</p>
+                </div>
+            `;
+            statusList.insertAdjacentHTML('beforeend', uiHtml);
+            lucide.createIcons();
+
+            const pBar = document.getElementById(`bar-${fileId}`);
+            const pPercent = document.getElementById(`percent-${fileId}`);
+            const sText = document.getElementById(`text-${fileId}`);
+            const itemUI = document.getElementById(`upload-item-${fileId}`);
+
+            try {
+                sText.innerText = "⏳ Lấy link cấp phép...";
+                const personName = currentUserProfile?.display_name || 'User';
+
+                const res = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'getUploadUrl', fileName: file.name, mimeType: file.type || 'application/octet-stream', personName: personName })
+                });
+                const data = await res.json();
+                if (data.status === 'error') throw new Error(data.message);
+
+                sText.innerText = "🚀 Đang truyền dữ liệu...";
+                await window.uploadPut(data.uploadUrl, file, pBar, pPercent);
+
+                sText.innerText = "🔍 Đang tạo link truy cập...";
+                pBar.style.width = "100%";
+                pPercent.innerText = "100%";
+
+                await new Promise(r => setTimeout(r, 2000));
+                const linkData = await window.findFileLink(file.name, data.folderId);
+
+                if (linkData.status === 'found') {
+                    sText.innerText = "✅ Hoàn tất!";
+                    sText.classList.replace("text-gray-500", "text-green-600");
+                    pBar.classList.replace("bg-[#0866FF]", "bg-green-500");
+
+                    setTimeout(() => itemUI.remove(), 1500);
+
+                    let type = 'document';
+                    let previewData = linkData.fileUrl;
+
+                    if (file.type.startsWith('image/')) {
+                        type = 'image';
+                        previewData = await compressImageToBase64(file);
+                    } else if (file.type.startsWith('video/')) {
+                        type = 'video';
+                        previewData = 'https://via.placeholder.com/400x300?text=VIDEO';
+                    }
+
+                    return { name: file.name, preview: previewData, drive_url: linkData.fileUrl, type: type };
+                } else {
+                    throw new Error("Mất kết nối với Link Drive.");
+                }
+            } catch (e) {
+                sText.innerText = "❌ Lỗi: " + e.message;
+                sText.classList.replace("text-gray-500", "text-red-500");
+                pBar.classList.replace("bg-[#0866FF]", "bg-red-500");
+                return null;
+            }
+        };
+
+        // --- XỬ LÝ CHỌN FILE VÀ GỌI UPLOAD ---
+        window.handleFileChange = async (e) => {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
+
+            const maxFiles = 10;
+            const filesArray = Array.from(files).slice(0, maxFiles - mediaFiles.length);
+            if (filesArray.length === 0) return alert(`Bạn chỉ được đính kèm tối đa ${maxFiles} mục!`);
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50');
+            document.getElementById('btn-text').innerText = 'Đang tải file...';
+
+            // Kích hoạt tất cả Upload cùng lúc (Promise.all)
+            const uploadPromises = filesArray.map((file, index) => {
+                const fileId = Date.now() + '-' + index;
+                return window.uploadSingleFile(file, fileId);
+            });
+
+            const results = await Promise.all(uploadPromises);
+
+            const successfulUploads = results.filter(res => res !== null);
+            mediaFiles = [...mediaFiles, ...successfulUploads];
+
+            renderModalMediaPreview();
+
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50');
+            document.getElementById('btn-text').innerText = 'Đăng bài viết';
+            e.target.value = '';
+        };
+
+        // Render Preview trong Modal (Có phân loại Ảnh / Video / Tài Liệu)
+        function renderModalMediaPreview() {
+            const container = document.getElementById('media-preview-container');
+            container.innerHTML = mediaFiles.map((media, idx) => {
+                let innerContent = '';
+                if (media.type === 'image') {
+                    innerContent = `<img src="${media.preview}" class="w-full h-full object-cover" />`;
+                } else if (media.type === 'video') {
+                    innerContent = `
+                        <img src="${media.preview}" class="w-full h-full object-cover opacity-50" />
+                        <div class="absolute inset-0 bg-black/20 flex items-center justify-center">
+                            <i data-lucide="play-circle" class="w-6 h-6 text-white"></i>
+                        </div>`;
+                } else {
+                    innerContent = `
+                        <div class="w-full h-full bg-blue-50 flex flex-col items-center justify-center text-blue-600 p-2 text-center">
+                            <i data-lucide="file-text" class="w-6 h-6"></i>
+                            <span class="text-[9px] font-bold mt-1 w-full truncate">${media.name || 'Tài liệu'}</span>
+                        </div>`;
+                }
+
+                return `
+                <div class="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-gray-300 shadow-sm animate-fade-in group" title="${media.name || ''}">
+                    ${innerContent}
+                    <button type="button" onclick="mediaFiles.splice(${idx},1); renderModalMediaPreview();" 
+                        class="absolute top-0 right-0 bg-red-500/90 text-white rounded-bl-lg px-1.5 py-0.5 text-xs hover:bg-red-600 transition opacity-0 group-hover:opacity-100 z-10">✕</button>
+                </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // --- CÁC HÀM XỬ LÝ FEED & KHÁC ---
         function simulateLoadingProcess() {
             return new Promise(resolve => {
                 let progress = 0;
@@ -419,37 +609,30 @@
                 const interval = setInterval(() => {
                     progress += Math.floor(Math.random() * 15) + 5;
                     if (progress >= 100) {
-                        progress = 100;
-                        clearInterval(interval);
-                        progressBar.style.width = '100%';
-                        percentText.innerText = `100%`;
+                        progress = 100; clearInterval(interval);
+                        progressBar.style.width = '100%'; percentText.innerText = `100%`;
                         setTimeout(resolve, 400);
                     } else {
-                        progressBar.style.width = `${progress}%`;
-                        percentText.innerText = `${progress}%`;
+                        progressBar.style.width = `${progress}%`; percentText.innerText = `${progress}%`;
                     }
                 }, 150);
             });
         }
 
-        // --- XỬ LÝ SỰ KIỆN CLICK BÊN NGOÀI ĐỂ ĐÓNG DROPDOWN ---
         document.addEventListener('click', (event) => {
             document.querySelectorAll('[id^="dropdown-menu-"]').forEach(menu => {
                 if (!menu.classList.contains('hidden')) menu.classList.add('hidden');
             });
         });
 
-        // --- INFINITE SCROLL ---
         window.addEventListener('scroll', () => {
             if (isFetching || !hasMorePosts) return;
             const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
             if (scrollTop + clientHeight >= scrollHeight - 150) {
-                currentPage++;
-                loadFeeds(true);
+                currentPage++; loadFeeds(true);
             }
         });
 
-        // --- AUTH ---
         async function checkSession() {
             const { data: { session } } = await backendApp.auth.getSession();
             if (session) {
@@ -457,8 +640,7 @@
                 const { data } = await backendApp.from('belife_profiles').select('*').eq('id', currentUser.id).single();
                 if (data) currentUserProfile = data;
             } else {
-                currentUser = null;
-                currentUserProfile = null;
+                currentUser = null; currentUserProfile = null;
             }
             renderAuthArea();
             await loadFeeds(false);
@@ -481,13 +663,10 @@
             if (error) {
                 const { data: signUpData, error: signErr } = await backendApp.auth.signUp({ email: authEmail, password: authPass });
                 if (signErr) {
-                    alert(signErr.message);
-                    btn.innerHTML = 'Bắt đầu ngay'; btn.disabled = false; return;
+                    alert(signErr.message); btn.innerHTML = 'Bắt đầu ngay'; btn.disabled = false; return;
                 }
                 data = signUpData;
-                await backendApp.from('belife_profiles').insert({
-                    id: data.user.id, display_name: name, phone_mask: '******' + phone.slice(-4)
-                });
+                await backendApp.from('belife_profiles').insert({ id: data.user.id, display_name: name, phone_mask: '******' + phone.slice(-4) });
             }
 
             document.getElementById('login-modal').classList.add('hidden');
@@ -497,8 +676,7 @@
         };
 
         window.handleLogout = async () => {
-            await backendApp.auth.signOut();
-            await checkSession();
+            await backendApp.auth.signOut(); await checkSession();
         };
 
         function renderAuthArea() {
@@ -514,7 +692,6 @@
                             <i data-lucide="log-out" class="w-4 h-4 text-red-500"></i>
                         </button>
                     </div>`;
-
                 if (triggerAvatar) {
                     triggerAvatar.innerHTML = currentUserProfile.display_name.charAt(0).toUpperCase();
                     triggerAvatar.className = "w-10 h-10 rounded-full bg-gradient-to-tr from-[#0866FF] to-blue-300 text-white flex items-center justify-center font-bold text-lg shadow-sm flex-shrink-0 transition-all";
@@ -524,7 +701,6 @@
                     <button onclick="window.openLoginModal(event)" class="flex items-center gap-1.5 bg-[#0866FF] hover:bg-[#0054d1] text-white px-4 py-1.5 rounded-full font-semibold text-sm transition shadow-sm">
                         <i data-lucide="log-in" class="w-4 h-4"></i><span>Đăng nhập</span>
                     </button>`;
-
                 if (triggerAvatar) {
                     triggerAvatar.innerHTML = `<i data-lucide="user" class="w-6 h-6 text-[#65676B]"></i>`;
                     triggerAvatar.className = "w-10 h-10 rounded-full bg-[#e4e6eb] flex items-center justify-center overflow-hidden flex-shrink-0 transition-all";
@@ -533,7 +709,6 @@
             lucide.createIcons();
         }
 
-        // --- LẤY DỮ LIỆU ---
         async function loadFeeds(isLoadMore = false) {
             if (isFetching) return;
             isFetching = true;
@@ -577,8 +752,7 @@
                     fullName: post.belife_profiles?.display_name || 'Học viên Ẩn danh',
                     feedback: post.feedback, mediaItems: post.media_items || [],
                     date: timeAgo(post.created_at), likes: postLikes.length,
-                    hasLiked: hasLiked,
-                    myReaction: hasLiked ? 'like' : null, // Mặc định ui hiển thị
+                    hasLiked: hasLiked, myReaction: hasLiked ? 'like' : null,
                     comments: post.belife_comments.length,
                     rawComments: post.belife_comments.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
                 };
@@ -590,7 +764,6 @@
             renderFeed();
         }
 
-        // --- RENDER GIAO DIỆN ---
         function renderFeed() {
             const container = document.getElementById('feed-container');
             if (feedbacks.length === 0) {
@@ -599,12 +772,10 @@
                         <i data-lucide="inbox" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
                         <p class="text-gray-500 font-medium">Chưa có bài viết nào. Hãy là người đầu tiên chia sẻ nhé!</p>
                     </div>`;
-                lucide.createIcons();
-                return;
+                lucide.createIcons(); return;
             }
 
             container.innerHTML = feedbacks.map(fb => {
-                // Xử lý UI Reaction hiện tại
                 const currentReaction = fb.myReaction && reactionConfig[fb.myReaction] ? reactionConfig[fb.myReaction] : {
                     icon: '<i data-lucide="thumbs-up" class="w-5 h-5"></i>', text: 'Thích', color: 'text-[#65676B]'
                 };
@@ -630,8 +801,7 @@
                             <button onclick="window.togglePostMenu(event, '${fb.id}')" class="text-gray-400 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-full transition focus:outline-none">
                                 <i data-lucide="more-horizontal" class="w-5 h-5"></i>
                             </button>
-                            
-                            <div id="dropdown-menu-${fb.id}" class="hidden absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-[0_2px_15px_-3px_rgba(0,0,0,0.15),0_10px_20px_-2px_rgba(0,0,0,0.1)] border border-gray-100 z-10 py-1.5 animate-scale-in">
+                            <div id="dropdown-menu-${fb.id}" class="hidden absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-10 py-1.5 animate-scale-in">
                                 <button onclick="window.handleViewStats('${fb.author_id}')" class="w-full text-left px-4 py-2.5 text-[15px] font-medium text-blue-600 hover:bg-gray-50 flex items-center gap-2.5 transition border-b border-gray-100">
                                     <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Xem thống kê
                                 </button>
@@ -664,249 +834,94 @@
                                 <button onclick="window.handleReaction('${fb.id}', 'wow')" class="text-2xl hover:scale-125 hover:-translate-y-1 transition-all">😮</button>
                                 <button onclick="window.handleReaction('${fb.id}', 'sad')" class="text-2xl hover:scale-125 hover:-translate-y-1 transition-all">😢</button>
                             </div>
-                            
                             <button onclick="window.handleReaction('${fb.id}', 'like', true)" class="w-full flex items-center justify-center gap-2 ${currentReaction.color} font-semibold hover:bg-[#F0F2F5] py-2 rounded-lg transition text-[15px]">
                                 <span class="text-lg flex items-center">${currentReaction.icon}</span> ${currentReaction.text}
                             </button>
                         </div>
-
                         <button onclick="window.toggleComments('${fb.id}')" class="flex-1 flex items-center justify-center gap-2 text-[#65676B] font-semibold hover:bg-[#F0F2F5] py-2 rounded-lg transition text-[15px]">
                             <i data-lucide="message-square" class="w-5 h-5"></i> Bình luận
                         </button>
                     </div>
-
                     ${showCommentsState[fb.id] ? renderCommentsHTML(fb) : ''}
                 </div>
             `}).join('');
-
             lucide.createIcons();
         }
 
-        // --- XỬ LÝ THỐNG KÊ CÁ NHÂN ---
-        window.handleViewStats = async (authorId) => {
-            document.querySelectorAll('[id^="dropdown-menu-"]').forEach(m => m.classList.add('hidden'));
+        // Render Media View trong Feed (Lưới Ảnh/Video + List Link Docs)
+        function renderMediaPreviewUI(fb) {
+            if (!fb.mediaItems || fb.mediaItems.length === 0) return '';
 
-            const modal = document.getElementById('stats-modal');
-            modal.classList.remove('hidden');
-            document.getElementById('stats-loading').classList.remove('hidden');
-            document.getElementById('stats-content').classList.add('hidden');
+            const docs = fb.mediaItems.filter(m => m.type === 'document');
+            const visualMedia = fb.mediaItems.filter(m => m.type === 'image' || m.type === 'video');
 
-            // Query toàn bộ post của user này
-            const { data, error } = await backendApp.from('belife_posts')
-                .select('*, belife_profiles(display_name)')
-                .eq('author_id', authorId);
+            let html = '';
 
-            if (error) {
-                alert("Có lỗi xảy ra khi tải thống kê!");
-                window.closeStatsModal(); return;
+            if (visualMedia.length > 0) {
+                const gridCols = visualMedia.length === 1 ? 'grid-cols-1' : 'grid-cols-2';
+                html += `<div class="mt-2 grid ${gridCols} gap-1 px-4">
+                            ${visualMedia.map((m, i) => `
+                                <div class="bg-gray-100 rounded-lg overflow-hidden border border-[#ced0d4]/50 flex items-center justify-center cursor-pointer hover:opacity-90 transition relative" 
+                                    onclick="window.openLightbox('${fb.id}', ${i})">
+                                    <img src="${m.preview}" loading="lazy" class="w-full h-auto max-h-[300px] object-cover" />
+                                    ${m.type === 'video' ? '<div class="absolute inset-0 bg-black/30 flex items-center justify-center"><i data-lucide="play-circle" class="w-12 h-12 text-white opacity-80"></i></div>' : ''}
+                                </div>
+                            `).join('')}
+                        </div>`;
             }
 
-            const authorName = data[0]?.belife_profiles?.display_name || 'Học viên ẩn danh';
-            const totalPosts = data.length;
-
-            let textOnly = 0, withImage = 0, withVideo = 0;
-
-            data.forEach(post => {
-                if (!post.media_items || post.media_items.length === 0) {
-                    textOnly++;
-                } else {
-                    const hasVid = post.media_items.some(m => m.type && m.type.includes('video') || m.preview.includes('video')); // Tuỳ format DB
-                    const hasImg = post.media_items.some(m => m.type === 'image' || !m.type);
-
-                    if (hasVid) withVideo++;
-                    else if (hasImg) withImage++; // Nếu không có video thì tính là post hình ảnh
-                }
-            });
-
-            document.getElementById('stats-name').innerText = authorName;
-            document.getElementById('stats-avatar').innerText = authorName.charAt(0).toUpperCase();
-            document.getElementById('stats-total').innerText = totalPosts;
-            document.getElementById('stats-text').innerText = textOnly;
-            document.getElementById('stats-image').innerText = withImage;
-            document.getElementById('stats-video').innerText = withVideo;
-
-            document.getElementById('stats-loading').classList.add('hidden');
-            document.getElementById('stats-content').classList.remove('hidden');
-        };
-
-        window.closeStatsModal = (e) => {
-            if (e) e.stopPropagation();
-            document.getElementById('stats-modal').classList.add('hidden');
-        };
-
-        // --- XỬ LÝ THỐNG KÊ ADMIN ---
-        window.openAdminStatsModal = (e) => {
-            if (e) e.stopPropagation();
-            const pass = prompt("Yêu cầu quyền Admin. Vui lòng nhập mật khẩu thống kê:");
-
-            if (pass === "31313") {
-                document.getElementById('admin-stats-modal').classList.remove('hidden');
-
-                // Mặc định chọn từ đầu tháng đến hôm nay
-                const today = new Date();
-                const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-                // Format ngày chuẩn YYYY-MM-DD cho input type="date"
-                document.getElementById('admin-stat-from').value = startOfMonth.toISOString().split('T')[0];
-                document.getElementById('admin-stat-to').value = today.toISOString().split('T')[0];
-
-                // Tự động load dữ liệu tháng này luôn
-                window.loadAdminStats();
-            } else if (pass !== null) {
-                alert("Sai mật khẩu! Bạn không có quyền truy cập.");
+            if (docs.length > 0) {
+                html += `<div class="mt-3 px-4 flex flex-col gap-2">
+                            ${docs.map(d => `
+                                <a href="${d.drive_url}" target="_blank" class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition group">
+                                    <div class="bg-white p-2 rounded shadow-sm group-hover:text-blue-600 text-gray-500">
+                                        <i data-lucide="paperclip" class="w-5 h-5"></i>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-gray-800 truncate group-hover:text-blue-700">${escapeHtml(d.name || 'Tài liệu đính kèm')}</p>
+                                        <p class="text-[11px] text-gray-500">Nhấn để xem / tải về</p>
+                                    </div>
+                                </a>
+                            `).join('')}
+                        </div>`;
             }
-        };
+            return html;
+        }
 
-        window.closeAdminStatsModal = (e) => {
-            if (e) e.stopPropagation();
-            document.getElementById('admin-stats-modal').classList.add('hidden');
-        };
-
-        window.loadAdminStats = async () => {
-            const fromDateStr = document.getElementById('admin-stat-from').value;
-            const toDateStr = document.getElementById('admin-stat-to').value;
-
-            if (!fromDateStr || !toDateStr) {
-                alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày!");
-                return;
-            }
-
-            // Xử lý múi giờ để bao trọn ngày
-            const fromDateObj = new Date(fromDateStr);
-            fromDateObj.setHours(0, 0, 0, 0); // Bắt đầu từ 00:00:00
-            const fromDateISO = fromDateObj.toISOString();
-
-            const toDateObj = new Date(toDateStr);
-            toDateObj.setHours(23, 59, 59, 999); // Kết thúc lúc 23:59:59
-            const toDateISO = toDateObj.toISOString();
-
-            document.getElementById('admin-stats-loading').classList.remove('hidden');
-            document.getElementById('admin-stats-results').innerHTML = '';
-
-            // Gọi dữ liệu từ Supabase theo khoảng thời gian
-            const { data, error } = await backendApp.from('belife_posts')
-                .select('author_id, created_at, belife_profiles(display_name)')
-                .gte('created_at', fromDateISO)
-                .lte('created_at', toDateISO);
-
-            document.getElementById('admin-stats-loading').classList.add('hidden');
-
-            if (error) {
-                document.getElementById('admin-stats-results').innerHTML = `<div class="text-center text-red-500 py-4 font-medium">Lỗi tải dữ liệu: ${error.message}</div>`;
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                document.getElementById('admin-stats-results').innerHTML = `<div class="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border border-gray-100 font-medium">Không có bài đăng nào trong khoảng thời gian này.</div>`;
-                return;
-            }
-
-            // Nhóm dữ liệu theo User
-            const userStats = {};
-            let totalPosts = 0;
-
-            data.forEach(post => {
-                totalPosts++;
-                const authorId = post.author_id;
-                const name = post.belife_profiles?.display_name || 'Học viên ẩn danh';
-
-                if (!userStats[authorId]) {
-                    userStats[authorId] = { name: name, count: 0 };
-                }
-                userStats[authorId].count++;
-            });
-
-            // Chuyển object thành mảng và sắp xếp giảm dần theo số lượng bài
-            const sortedStats = Object.values(userStats).sort((a, b) => b.count - a.count);
-
-            // Render ra bảng HTML
-            let html = `
-                <div class="mb-4 bg-blue-50 text-blue-800 p-3.5 rounded-xl flex justify-between items-center font-bold border border-blue-100 shadow-sm">
-                    <span>Tổng số bài đăng trong kỳ:</span>
-                    <span class="text-2xl bg-white text-[#0866FF] px-3 py-1 rounded-lg border border-blue-200">${totalPosts}</span>
-                </div>
-                <div class="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                    <table class="w-full text-left text-sm text-gray-600">
-                        <thead class="bg-gray-100 text-gray-700 uppercase text-[11px] font-bold tracking-wider">
-                            <tr>
-                                <th class="px-4 py-3">Top</th>
-                                <th class="px-4 py-3">Họ và tên học viên</th>
-                                <th class="px-4 py-3 text-center">Số bài đăng</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white">
-            `;
-
-            sortedStats.forEach((user, index) => {
-                // Đánh dấu Top 1, 2, 3 bằng màu sắc
-                let rankClass = "text-gray-500";
-                if (index === 0) rankClass = "text-yellow-500 font-bold text-lg";
-                else if (index === 1) rankClass = "text-gray-400 font-bold text-lg";
-                else if (index === 2) rankClass = "text-orange-400 font-bold text-lg";
-
-                html += `
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-4 py-3 ${rankClass}">#${index + 1}</td>
-                        <td class="px-4 py-3 font-semibold text-gray-900 flex items-center gap-2">
-                            <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300 text-gray-600 flex items-center justify-center font-bold text-xs">
-                                ${user.name.charAt(0).toUpperCase()}
+        function renderCommentsHTML(fb) {
+            let html = `<div class="px-4 pb-4 pt-3 border-t border-[#ced0d4]/60 bg-[#f8f9fa] animate-fade-in">`;
+            if (fb.rawComments && fb.rawComments.length > 0) {
+                html += `<div class="space-y-3 mb-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">`;
+                fb.rawComments.forEach(c => {
+                    html += `
+                    <div class="flex gap-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center font-bold text-xs text-gray-700 flex-shrink-0 cursor-pointer" onclick="window.handleViewStats('${c.author_id}')">
+                            ${(c.belife_profiles?.display_name || 'U').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="bg-white rounded-2xl px-3 py-2 text-[14px] shadow-sm border border-gray-100 inline-block">
+                                <span class="font-bold block text-gray-800 cursor-pointer hover:underline" onclick="window.handleViewStats('${c.author_id}')">${escapeHtml(c.belife_profiles?.display_name || 'Ẩn danh')}</span>
+                                <span class="text-gray-700 whitespace-pre-wrap">${escapeHtml(c.text)}</span>
                             </div>
-                            ${escapeHtml(user.name)}
-                        </td>
-                        <td class="px-4 py-3 text-center">
-                            <span class="inline-flex items-center justify-center bg-blue-50 text-[#0866FF] font-bold rounded-full w-8 h-8">
-                                ${user.count}
-                            </span>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            html += `</tbody></table></div>`;
-            document.getElementById('admin-stats-results').innerHTML = html;
-        };
-
-        // --- XỬ LÝ REACTION ĐA DẠNG ---
-        window.handleReaction = async (postId, type, isToggleDefault = false) => {
-            if (!currentUser) { window.openLoginModal(new Event('click')); return; }
-
-            const fbIndex = feedbacks.findIndex(f => f.id === postId);
-            const fb = feedbacks[fbIndex];
-            const wasLiked = fb.hasLiked;
-
-            if (isToggleDefault && wasLiked) {
-                fb.hasLiked = false;
-                fb.myReaction = null;
-                fb.likes -= 1;
-                renderFeed();
-                await backendApp.from('belife_likes').delete().match({ user_id: currentUser.id, post_id: postId, comment_id: null });
-                return;
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
             }
 
-            fb.hasLiked = true;
-            fb.myReaction = type;
-            if (!wasLiked) fb.likes += 1;
-
-            renderFeed();
-
-            try {
-                if (wasLiked) {
-                    await backendApp.from('belife_likes').delete().match({ user_id: currentUser.id, post_id: postId, comment_id: null });
-                }
-                await backendApp.from('belife_likes').insert({
-                    user_id: currentUser.id,
-                    post_id: postId
-                });
-            } catch (err) { console.error("Lỗi khi reaction:", err); }
-        };
-
-        window.togglePostMenu = (event, postId) => {
-            event.stopPropagation();
-            document.querySelectorAll('[id^="dropdown-menu-"]').forEach(menu => {
-                if (menu.id !== `dropdown-menu-${postId}`) menu.classList.add('hidden');
-            });
-            document.getElementById(`dropdown-menu-${postId}`).classList.toggle('hidden');
-        };
+            let currentVal = commentInputs[fb.id] || '';
+            html += `
+                <form onsubmit="window.handleAddComment(event, '${fb.id}')" class="flex gap-2 items-center">
+                    <input type="text" value="${escapeHtml(currentVal)}" oninput="window.handleCommentInput('${fb.id}', this.value)" 
+                        placeholder="Viết bình luận..." 
+                        class="flex-1 px-4 py-2 text-[14px] rounded-full border border-gray-300 outline-none focus:border-[#0866FF] transition shadow-inner bg-white" />
+                    <button type="submit" id="btn-send-${fb.id}" class="text-white bg-[#0866FF] hover:bg-[#0054d1] p-2 rounded-full transition shadow-md">
+                        <i data-lucide="send" class="w-4 h-4 ml-0.5"></i>
+                    </button>
+                </form>
+            </div>`;
+            return html;
+        }
 
         window.submitPost = async (e) => {
             e.preventDefault();
@@ -944,31 +959,113 @@
             document.getElementById('btn-text').innerText = 'Đăng bài viết';
         };
 
-        window.handleDeletePost = async (postId) => {
-            const menu = document.getElementById(`dropdown-menu-${postId}`);
-            if (menu) menu.classList.add('hidden');
+        window.handleViewStats = async (authorId) => {
+            document.querySelectorAll('[id^="dropdown-menu-"]').forEach(m => m.classList.add('hidden'));
+            const modal = document.getElementById('stats-modal');
+            modal.classList.remove('hidden');
+            document.getElementById('stats-loading').classList.remove('hidden');
+            document.getElementById('stats-content').classList.add('hidden');
 
-            const adminPass = prompt("Yêu cầu quyền Admin. Vui lòng nhập mật khẩu để xóa bài viết này:");
-            if (adminPass === "31313") {
-                feedbacks = feedbacks.filter(f => f.id !== postId); renderFeed();
-                const { error } = await backendApp.from('belife_posts').delete().match({ id: postId });
-                if (error) alert("Lỗi hệ thống: " + error.message);
-                else showSuccess('Đã xóa bài viết bằng quyền Admin!');
-            } else if (adminPass !== null) {
-                alert("Sai mật khẩu! Bạn không có quyền xóa bài viết này.");
-            }
+            const { data, error } = await backendApp.from('belife_posts').select('*, belife_profiles(display_name)').eq('author_id', authorId);
+            if (error) { alert("Có lỗi xảy ra khi tải thống kê!"); window.closeStatsModal(); return; }
+
+            const authorName = data[0]?.belife_profiles?.display_name || 'Học viên ẩn danh';
+            const totalPosts = data.length;
+            let textOnly = 0, withImage = 0, withMediaFile = 0;
+
+            data.forEach(post => {
+                if (!post.media_items || post.media_items.length === 0) { textOnly++; }
+                else {
+                    const hasVidOrDoc = post.media_items.some(m => m.type === 'video' || m.type === 'document');
+                    const hasImg = post.media_items.some(m => m.type === 'image');
+                    if (hasVidOrDoc) withMediaFile++; else if (hasImg) withImage++;
+                }
+            });
+
+            document.getElementById('stats-name').innerText = authorName;
+            document.getElementById('stats-avatar').innerText = authorName.charAt(0).toUpperCase();
+            document.getElementById('stats-total').innerText = totalPosts;
+            document.getElementById('stats-text').innerText = textOnly;
+            document.getElementById('stats-image').innerText = withImage;
+            document.getElementById('stats-video').innerText = withMediaFile;
+
+            document.getElementById('stats-loading').classList.add('hidden');
+            document.getElementById('stats-content').classList.remove('hidden');
         };
 
-        // --- BÌNH LUẬN ---
+        window.loadAdminStats = async () => {
+            const fromDateStr = document.getElementById('admin-stat-from').value;
+            const toDateStr = document.getElementById('admin-stat-to').value;
+            if (!fromDateStr || !toDateStr) return alert("Vui lòng chọn đầy đủ Từ ngày và Đến ngày!");
+
+            const fromDateObj = new Date(fromDateStr); fromDateObj.setHours(0, 0, 0, 0);
+            const toDateObj = new Date(toDateStr); toDateObj.setHours(23, 59, 59, 999);
+
+            document.getElementById('admin-stats-loading').classList.remove('hidden');
+            document.getElementById('admin-stats-results').innerHTML = '';
+
+            const { data, error } = await backendApp.from('belife_posts')
+                .select('author_id, created_at, belife_profiles(display_name)')
+                .gte('created_at', fromDateObj.toISOString())
+                .lte('created_at', toDateObj.toISOString());
+
+            document.getElementById('admin-stats-loading').classList.add('hidden');
+            if (error) return document.getElementById('admin-stats-results').innerHTML = `<div class="text-center text-red-500 py-4 font-medium">Lỗi tải dữ liệu: ${error.message}</div>`;
+            if (!data || data.length === 0) return document.getElementById('admin-stats-results').innerHTML = `<div class="text-center text-gray-500 py-8 bg-gray-50 rounded-lg border font-medium">Không có dữ liệu.</div>`;
+
+            const userStats = {}; let totalPosts = 0;
+            data.forEach(post => {
+                totalPosts++;
+                const authorId = post.author_id;
+                const name = post.belife_profiles?.display_name || 'Học viên ẩn danh';
+                if (!userStats[authorId]) userStats[authorId] = { name: name, count: 0 };
+                userStats[authorId].count++;
+            });
+
+            const sortedStats = Object.values(userStats).sort((a, b) => b.count - a.count);
+            let html = `<div class="mb-4 bg-blue-50 text-blue-800 p-3.5 rounded-xl flex justify-between font-bold border border-blue-100 shadow-sm">
+                            <span>Tổng bài:</span><span class="text-2xl bg-white text-[#0866FF] px-3 py-1 rounded-lg border">${totalPosts}</span>
+                        </div>
+                        <div class="border rounded-xl overflow-hidden shadow-sm"><table class="w-full text-left text-sm text-gray-600"><tbody class="divide-y bg-white">`;
+
+            sortedStats.forEach((user, index) => {
+                let rankClass = "text-gray-500";
+                if (index === 0) rankClass = "text-yellow-500 font-bold text-lg";
+                else if (index === 1) rankClass = "text-gray-400 font-bold text-lg";
+                else if (index === 2) rankClass = "text-orange-400 font-bold text-lg";
+
+                html += `<tr class="hover:bg-gray-50">
+                            <td class="px-4 py-3 ${rankClass}">#${index + 1}</td>
+                            <td class="px-4 py-3 font-semibold text-gray-900 flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-full bg-gray-200 flex items-center justify-center text-xs">${user.name.charAt(0).toUpperCase()}</div>
+                                ${escapeHtml(user.name)}
+                            </td>
+                            <td class="px-4 py-3 text-center"><span class="inline-flex items-center justify-center bg-blue-50 text-[#0866FF] font-bold rounded-full w-8 h-8">${user.count}</span></td>
+                        </tr>`;
+            });
+            html += `</tbody></table></div>`;
+            document.getElementById('admin-stats-results').innerHTML = html;
+        };
+
+        window.handleReaction = async (postId, type, isToggleDefault = false) => {
+            if (!currentUser) return window.openLoginModal(new Event('click'));
+            const fb = feedbacks.find(f => f.id === postId); const wasLiked = fb.hasLiked;
+            if (isToggleDefault && wasLiked) {
+                fb.hasLiked = false; fb.myReaction = null; fb.likes -= 1; renderFeed();
+                await backendApp.from('belife_likes').delete().match({ user_id: currentUser.id, post_id: postId, comment_id: null });
+                return;
+            }
+            fb.hasLiked = true; fb.myReaction = type; if (!wasLiked) fb.likes += 1; renderFeed();
+            try {
+                if (wasLiked) await backendApp.from('belife_likes').delete().match({ user_id: currentUser.id, post_id: postId, comment_id: null });
+                await backendApp.from('belife_likes').insert({ user_id: currentUser.id, post_id: postId });
+            } catch (err) { }
+        };
+
         window.handleAddComment = async (e, postId) => {
-            e.preventDefault();
-            if (!currentUser) { window.openLoginModal(e); return; }
-
-            const text = commentInputs[postId];
-            if (!text || !text.trim()) return;
-
-            const btnSend = document.getElementById(`btn-send-${postId}`);
-            btnSend.disabled = true; btnSend.classList.add('opacity-50');
+            e.preventDefault(); if (!currentUser) return window.openLoginModal(e);
+            const text = commentInputs[postId]; if (!text || !text.trim()) return;
+            const btnSend = document.getElementById(`btn-send-${postId}`); btnSend.disabled = true; btnSend.classList.add('opacity-50');
 
             const { data, error } = await backendApp.from('belife_comments').insert({
                 post_id: postId, author_id: currentUser.id, text: text.trim(), parent_id: null
@@ -976,155 +1073,76 @@
 
             if (!error) {
                 const fb = feedbacks.find(f => f.id === postId);
-                fb.rawComments.push(data); fb.comments++; commentInputs[postId] = '';
-                renderFeed();
+                fb.rawComments.push(data); fb.comments++; commentInputs[postId] = ''; renderFeed();
             } else {
                 btnSend.disabled = false; btnSend.classList.remove('opacity-50');
             }
         };
 
-        window.toggleComments = (postId) => { showCommentsState[postId] = !showCommentsState[postId]; renderFeed(); };
-        window.handleCommentInput = (postId, val) => { commentInputs[postId] = val; };
-
-        function renderCommentsHTML(fb) {
-            let html = `<div class="px-4 pb-4 pt-3 border-t border-[#ced0d4]/60 bg-[#f8f9fa] animate-fade-in">`;
-            if (fb.rawComments && fb.rawComments.length > 0) {
-                html += `<div class="space-y-3 mb-4 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">`;
-                fb.rawComments.forEach(c => {
-                    html += `
-                    <div class="flex gap-2">
-                        <div class="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center font-bold text-xs text-gray-700 flex-shrink-0 cursor-pointer" onclick="window.handleViewStats('${c.author_id}')">
-                            ${(c.belife_profiles?.display_name || 'U').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                            <div class="bg-white rounded-2xl px-3 py-2 text-[14px] shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-gray-100 inline-block">
-                                <span class="font-bold block text-gray-800 cursor-pointer hover:underline" onclick="window.handleViewStats('${c.author_id}')">${escapeHtml(c.belife_profiles?.display_name || 'Ẩn danh')}</span>
-                                <span class="text-gray-700 whitespace-pre-wrap">${escapeHtml(c.text)}</span>
-                            </div>
-                        </div>
-                    </div>`;
-                });
-                html += `</div>`;
-            }
-
-            let currentVal = commentInputs[fb.id] || '';
-            html += `
-                <form onsubmit="window.handleAddComment(event, '${fb.id}')" class="flex gap-2 items-center">
-                    <input type="text" value="${escapeHtml(currentVal)}" oninput="window.handleCommentInput('${fb.id}', this.value)" 
-                        placeholder="Viết bình luận..." 
-                        class="flex-1 px-4 py-2 text-[14px] rounded-full border border-gray-300 outline-none focus:border-[#0866FF] transition shadow-inner bg-white" />
-                    <button type="submit" id="btn-send-${fb.id}" class="text-white bg-[#0866FF] hover:bg-[#0054d1] p-2 rounded-full transition shadow-md">
-                        <i data-lucide="send" class="w-4 h-4 ml-0.5"></i>
-                    </button>
-                </form>
-            </div>`;
-            return html;
-        }
-
-        // --- MEDIA HIỂN THỊ / UPLOAD ---
-        function renderMediaPreviewUI(fb) {
-            if (!fb.mediaItems || fb.mediaItems.length === 0) return '';
-            const gridCols = fb.mediaItems.length === 1 ? 'grid-cols-1' : 'grid-cols-2';
-            return `<div class="mt-2 grid ${gridCols} gap-1 px-4">
-                        ${fb.mediaItems.map((m, i) => `
-                            <div class="bg-gray-100 rounded-lg overflow-hidden border border-[#ced0d4]/50 flex items-center justify-center cursor-pointer hover:opacity-90 transition relative" 
-                                onclick="window.openLightbox('${fb.id}', ${i})">
-                                <img src="${m.preview}" loading="lazy" class="w-full h-auto max-h-[300px] object-cover" />
-                                ${m.type === 'video' ? '<div class="absolute inset-0 bg-black/30 flex items-center justify-center"><i data-lucide="play-circle" class="w-12 h-12 text-white opacity-80"></i></div>' : ''}
-                            </div>
-                        `).join('')}
-                    </div>`;
-        }
-
-        window.handleFileChange = async (e) => {
-            const files = e.target.files;
-            if (files && files.length > 0) {
-                const filesArray = Array.from(files);
-                const processedFiles = await Promise.all(filesArray.map(async (file) => {
-                    if (file.type.startsWith('image/')) {
-                        const base64Preview = await compressImageToBase64(file);
-                        return { preview: base64Preview, type: 'image' };
-                    } else if (file.type.startsWith('video/')) {
-                        return { preview: 'https://via.placeholder.com/400x300?text=VIDEO', type: 'video' };
-                    }
-                    return null;
-                }));
-                mediaFiles = [...mediaFiles, ...processedFiles.filter(Boolean)].slice(0, 4);
-                renderModalMediaPreview();
+        window.handleDeletePost = async (postId) => {
+            const menu = document.getElementById(`dropdown-menu-${postId}`); if (menu) menu.classList.add('hidden');
+            const adminPass = prompt("Yêu cầu quyền Admin. Mật khẩu:");
+            if (adminPass === "31313") {
+                feedbacks = feedbacks.filter(f => f.id !== postId); renderFeed();
+                await backendApp.from('belife_posts').delete().match({ id: postId });
+                showSuccess('Đã xóa bài viết bằng quyền Admin!');
             }
         };
 
-        const compressImageToBase64 = (file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader(); reader.readAsDataURL(file);
-                reader.onload = (e) => {
-                    const img = new Image(); img.src = e.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; let scaleSize = 1;
-                        if (img.width > MAX_WIDTH) scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = img.width * scaleSize; canvas.height = img.height * scaleSize;
-                        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.6));
-                    };
-                };
-            });
-        };
-
-        function renderModalMediaPreview() {
-            const container = document.getElementById('media-preview-container');
-            container.innerHTML = mediaFiles.map((media, idx) => `
-                <div class="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden border border-gray-300 shadow-sm animate-fade-in">
-                    <img src="${media.preview}" class="w-full h-full object-cover" />
-                    <button type="button" onclick="mediaFiles.splice(${idx},1); renderModalMediaPreview();" 
-                        class="absolute top-0 right-0 bg-red-500/90 text-white rounded-bl-lg px-1.5 py-0.5 text-xs hover:bg-red-600 transition">✕</button>
-                </div>
-            `).join('');
-        }
-
-        // --- LIGHTBOX ---
+        // Lightbox Functions
         window.openLightbox = (postId, index) => {
             const fb = feedbacks.find(f => f.id === postId); if (!fb) return;
-            currentViewImages = fb.mediaItems; currentImageIndex = index;
+
+            // Lấy danh sách Ảnh/Video từ bài post
+            const visualMedia = fb.mediaItems.filter(m => m.type === 'image' || m.type === 'video');
+            const selectedMedia = visualMedia[index];
+
+            // Bấm vào Video -> Mở link Drive ở Tab mới
+            if (selectedMedia.type === 'video' && selectedMedia.drive_url) {
+                window.open(selectedMedia.drive_url, '_blank');
+                return;
+            }
+
+            // Bấm vào Ảnh -> Mở Lightbox
+            currentViewImages = visualMedia.filter(m => m.type === 'image');
+            if (currentViewImages.length === 0) return;
+
+            let newIndex = currentViewImages.findIndex(img => img.preview === selectedMedia.preview);
+            currentImageIndex = newIndex !== -1 ? newIndex : 0;
+
             updateLightboxView();
             document.getElementById('lightbox-modal').classList.remove('hidden'); document.body.style.overflow = 'hidden';
         };
 
-        window.closeLightbox = (e) => {
-            if (e) e.stopPropagation();
-            document.getElementById('lightbox-modal').classList.add('hidden'); document.body.style.overflow = '';
-        };
-
+        window.closeLightbox = (e) => { if (e) e.stopPropagation(); document.getElementById('lightbox-modal').classList.add('hidden'); document.body.style.overflow = ''; };
         window.changeLightboxImage = (direction, e) => {
-            if (e) e.stopPropagation();
-            currentImageIndex += direction;
+            if (e) e.stopPropagation(); currentImageIndex += direction;
             if (currentImageIndex < 0) currentImageIndex = currentViewImages.length - 1;
             if (currentImageIndex >= currentViewImages.length) currentImageIndex = 0;
             updateLightboxView();
         };
-
         function updateLightboxView() {
-            const imgEl = document.getElementById('lightbox-img');
-            imgEl.src = currentViewImages[currentImageIndex].preview;
+            document.getElementById('lightbox-img').src = currentViewImages[currentImageIndex].preview;
             const counter = document.getElementById('lightbox-counter');
             if (currentViewImages.length > 1) { counter.innerText = `${currentImageIndex + 1} / ${currentViewImages.length}`; counter.style.display = 'block'; }
-            else { counter.style.display = 'none'; }
+            else counter.style.display = 'none';
         }
 
-        // --- MODAL TOGGLES & HELPERS ---
-        window.openPostModal = () => { if (!currentUser) { window.openLoginModal(); return; } document.getElementById('post-modal').classList.remove('hidden'); };
+        // Toggles & Helpers
+        window.togglePostMenu = (event, postId) => { event.stopPropagation(); document.querySelectorAll('[id^="dropdown-menu-"]').forEach(menu => { if (menu.id !== `dropdown-menu-${postId}`) menu.classList.add('hidden'); }); document.getElementById(`dropdown-menu-${postId}`).classList.toggle('hidden'); };
+        window.toggleComments = (postId) => { showCommentsState[postId] = !showCommentsState[postId]; renderFeed(); };
+        window.handleCommentInput = (postId, val) => { commentInputs[postId] = val; };
+        window.openPostModal = () => { if (!currentUser) return window.openLoginModal(); document.getElementById('post-modal').classList.remove('hidden'); };
         window.closePostModal = (e) => { if (e) e.stopPropagation(); document.getElementById('post-modal').classList.add('hidden'); }
         window.openLoginModal = (e) => { if (e) e.stopPropagation(); document.getElementById('login-modal').classList.remove('hidden'); }
         window.closeLoginModal = (e) => { if (e) e.stopPropagation(); document.getElementById('login-modal').classList.add('hidden'); }
+        window.closeStatsModal = (e) => { if (e) e.stopPropagation(); document.getElementById('stats-modal').classList.add('hidden'); };
+        window.closeAdminStatsModal = (e) => { if (e) e.stopPropagation(); document.getElementById('admin-stats-modal').classList.add('hidden'); };
         function showSuccess(msg) { const el = document.getElementById('success-message'); document.getElementById('success-text').innerText = msg; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 3000); }
-        function timeAgo(dateStr) {
-            const diff = Math.floor((new Date() - new Date(dateStr)) / 1000);
-            if (diff < 60) return "Vừa xong"; if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-            if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`; return new Date(dateStr).toLocaleDateString('vi-VN');
-        }
+        function timeAgo(dateStr) { const diff = Math.floor((new Date() - new Date(dateStr)) / 1000); if (diff < 60) return "Vừa xong"; if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`; if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`; return new Date(dateStr).toLocaleDateString('vi-VN'); }
         function escapeHtml(text) { return (text || '').toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
 
-        // --- INIT ---
+        // INIT
         document.addEventListener('DOMContentLoaded', async () => {
             lucide.createIcons();
             const minLoadTimePromise = simulateLoadingProcess();
