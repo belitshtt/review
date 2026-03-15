@@ -836,12 +836,15 @@
                                     <i data-lucide="bar-chart-2" class="w-4 h-4"></i> Xem thống kê
                                 </button>
                                 ${(isAdmin || (currentUser && currentUser.id === fb.author_id)) ? `
-                                <button onclick="window.openEditPostModal('${fb.id}')" class="w-full text-left px-4 py-2.5 text-[15px] font-medium text-green-600 hover:bg-gray-50 flex items-center gap-2.5 transition border-b border-gray-100">
-                                    <i data-lucide="edit" class="w-4 h-4"></i> Sửa bài viết
-                                </button>
-                                <button onclick="window.handleDeletePost('${fb.id}')" class="w-full text-left px-4 py-2.5 text-[15px] font-medium text-red-600 hover:bg-gray-50 flex items-center gap-2.5 transition border-b border-gray-100">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa bài viết
-                                </button>
+                               <button onclick="window.openEditPostModal('${fb.id}')" class="w-full text-left px-4 py-2.5 text-[15px] font-medium text-green-600 hover:bg-gray-50 flex items-center gap-2.5 transition border-b border-gray-100">
+    <i data-lucide="edit" class="w-4 h-4"></i> Sửa bài viết
+</button>
+<button onclick="window.openEditClassInfo('${fb.id}')" class="w-full text-left px-4 py-2.5 text-[15px] font-medium text-teal-600 hover:bg-gray-50 flex items-center gap-2.5 transition border-b border-gray-100">
+    <i data-lucide="graduation-cap" class="w-4 h-4"></i> Sửa khóa học
+</button>
+<button onclick="window.handleDeletePost('${fb.id}')" class="w-full text-left px-4 py-2.5 text-[15px] font-medium text-red-600 hover:bg-gray-50 flex items-center gap-2.5 transition border-b border-gray-100">
+    <i data-lucide="trash-2" class="w-4 h-4"></i> Xóa bài viết
+</button>
                                 ` : ''}
                                 ${isAdmin ? `
                                 <button onclick="window.openEditUserModal('${fb.author_id}', '${escapeHtml(fb.fullName)}')" class="w-full text-left px-4 py-2.5 text-[15px] font-medium text-orange-600 hover:bg-gray-50 flex items-center gap-2.5 transition border-b border-gray-100">
@@ -1236,6 +1239,54 @@
             renderFeed();
             showSuccess('Sửa bài viết thành công!');
         }
+
+        window.openEditClassInfo = (postId) => {
+            const menu = document.getElementById(`dropdown-menu-${postId}`);
+            if (menu) menu.classList.add('hidden');
+
+            const fb = feedbacks.find(f => f.id === postId);
+            if (!fb) return;
+
+            const newClassInfo = prompt("Sửa thông tin khóa học (VD: Lớp Web Kỹ Năng K10):", fb.classInfo);
+
+            if (newClassInfo && newClassInfo.trim() !== "" && newClassInfo.trim().toUpperCase() !== fb.classInfo) {
+                submitEditClassInfo(postId, newClassInfo.trim().toUpperCase());
+            }
+        };
+
+        async function submitEditClassInfo(postId, newClassInfo) {
+            console.log(`[Debug] Đang cập nhật khóa học cho bài ID ${postId} thành: ${newClassInfo}`);
+
+            try {
+                const { data, error } = await backendApp
+                    .from('belife_posts')
+                    .update({ class_info: newClassInfo })
+                    .eq('id', postId)
+                    .select();
+
+                if (error) {
+                    console.error("[Error] Lỗi khi cập nhật DB:", error);
+                    throw new Error(error.message);
+                }
+
+                if (!data || data.length === 0) {
+                    console.warn("[Warn] Supabase chặn lệnh UPDATE. Hãy kiểm tra lại Policy cho bảng belife_posts.");
+                    throw new Error("Bạn không có quyền sửa khóa học này (RLS chặn).");
+                }
+
+                console.log("[Success] Cập nhật thành công DB:", data);
+
+                const fb = feedbacks.find(f => f.id === postId);
+                if (fb) fb.classInfo = newClassInfo;
+
+                renderFeed();
+                showSuccess('Cập nhật khóa học thành công!');
+
+            } catch (err) {
+                console.error("[Final Error]:", err.message);
+                alert("Lỗi: " + err.message);
+            }
+        }   
 
         // --- ADMIN SỬA TÊN USER ---
         window.openEditUserModal = (userId, currentName) => {
